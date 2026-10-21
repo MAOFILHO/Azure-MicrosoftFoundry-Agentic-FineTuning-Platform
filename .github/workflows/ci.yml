@@ -101,6 +101,7 @@ jobs:
         run: terraform fmt -check -recursive
 
       - name: next_suffix.py unit tests (Terraform external-provider contract)
+        working-directory: .
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
