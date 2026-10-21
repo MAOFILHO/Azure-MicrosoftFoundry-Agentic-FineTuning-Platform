@@ -201,8 +201,8 @@ errors/warnings.
       (budget alert enforced before billable resources via `depends_on` in
       main.tf) → smoke-post-provision → live run → smoke-post-run → uploads
       outputs as a build artifact.
-- [x] 6.8 `.github/workflows/teardown.yml` — `workflow_dispatch` + nightly
-      cron (03:17 UTC); pre-sweep → `terraform destroy` → post-destroy sweep
+- [x] 6.8 `.github/workflows/teardown.yml` — `workflow_dispatch` (a nightly
+      cron existed in the monorepo; dropped on extraction); pre-sweep → `terraform destroy` → post-destroy sweep
       → smoke-post-teardown (release blocker).
 
 **Gate:** `make test` → all unit tests pass. ✅ Verified 2026-08-05 — 78 passed.

@@ -1,0 +1,89 @@
+name: Teardown
+
+# Manual only. In the Portfolio-Projects monorepo this also ran on a nightly
+# schedule (cron "23 3 * * *") as a safety-net sweep for orphaned resources;
+# that schedule had failed every night since 2026-08-12 ("No subscriptions
+# found" at azure/login) and was deliberately NOT carried over, so this repo
+# never fires it on its own. Re-add a `schedule:` trigger only after the
+# FOUNDRY_AZURE_* variables and the federated credential for this repo are
+# confirmed working via a manual run.
+#
+# Was broken 2026-08-10/11: the `azure/login` OIDC step failed every run
+# (AADSTS700016 — the Entra ID app registration behind FOUNDRY_AZURE_CLIENT_ID
+# had been deleted, because it lived in the same Terraform state/config as
+# the AI infra and a local `terraform destroy` took it down too). Fixed
+# 2026-08-12 in two steps: first recreated the identity in place (restored
+# the failing workflow immediately), then moved it into its own Terraform
+# root — infra/terraform-identity/, see that config's header comment — so
+# infra/terraform/'s own `terraform destroy` (what `make teardown` runs,
+# locally or here) can structurally never reach it again. hosting.tf now
+# only looks the identity up by client_id and grants it a role assignment,
+# never creates or destroys it. Verified with a manual run
+# (workflow_dispatch), green end to end including the post-teardown smoke
+# test.
+on:
+  workflow_dispatch: {}
+
+env:
+  RUN_LIVE_SMOKE: "1"
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy-azure-microsoftfoundry-agentic-finetuning-platform
+  cancel-in-progress: false
+
+jobs:
+  teardown:
+    name: Destroy + sweep + verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.FOUNDRY_AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.FOUNDRY_AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.FOUNDRY_AZURE_SUBSCRIPTION_ID }}
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "1.9.8"
+
+      - name: Pre-sweep (catch orphans from a prior stale suffix first)
+        run: |
+          python infra/terraform/scripts/sweep_orphans.py --tag foundry-agentic-platform || true
+
+      - name: terraform init
+        working-directory: infra/terraform
+        run: terraform init -input=false
+        continue-on-error: true # no state yet is a valid "nothing to tear down" outcome
+
+      - name: terraform destroy
+        working-directory: infra/terraform
+        run: |
+          terraform destroy -auto-approve \
+            -var="dockerhub_username=${{ vars.DOCKERHUB_USERNAME }}" \
+            -var="github_oidc_client_id=${{ vars.FOUNDRY_AZURE_CLIENT_ID }}"
+        continue-on-error: true # state may be empty/missing; the sweep below is authoritative
+
+      - name: Post-destroy sweep (catches anything destroy missed)
+        run: python infra/terraform/scripts/sweep_orphans.py --tag foundry-agentic-platform
+
+      - name: Wait for async deletions to finish
+        run: sleep 60
+
+      - name: Post-teardown smoke test — release blocker
+        run: pytest tests/smoke_post_teardown -v

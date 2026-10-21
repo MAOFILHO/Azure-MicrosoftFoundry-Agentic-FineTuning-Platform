@@ -4,9 +4,9 @@
 #
 # Prerequisite this file assumes already exists, created out-of-band via
 # `az role definition create --role-definition @infra/foundry-deployer-role.json`
-# (matches this monorepo's convention — see sibling
-# Event-Driven-ML-Forecasting-Platform/cloud/infra/forecast-deployer-role.json,
-# which is applied the same way, not Terraform-managed). This is a real
+# (same convention as the sibling Event-Driven-ML-Forecasting-Platform
+# project's cloud/infra/forecast-deployer-role.json, which is applied the same
+# way, not Terraform-managed). This is a real
 # chicken-and-egg: the role must exist before the `data` lookup below can
 # resolve it, and the very first `terraform apply` here still needs to run
 # with your own elevated local credentials (same as every apply so far in

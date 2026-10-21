@@ -59,9 +59,9 @@ variable "display_name" {
 }
 
 variable "github_repo" {
-  description = "owner/repo of the monorepo this project lives in, for the OIDC federated credential's subject claim."
+  description = "owner/repo this project lives in, for the OIDC federated credential's subject claim."
   type        = string
-  default     = "MAOFILHO/Portfolio-Projects"
+  default     = "MAOFILHO/Azure-MicrosoftFoundry-Agentic-FineTuning-Platform"
 }
 
 resource "azuread_application" "github_oidc" {

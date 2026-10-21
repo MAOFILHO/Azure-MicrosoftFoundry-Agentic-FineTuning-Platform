@@ -12,7 +12,7 @@
 ![Azure](https://img.shields.io/badge/Azure-AI_Foundry-0078D4?style=flat&logo=microsoftazure&logoColor=white&labelColor=1a1a2e)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker&logoColor=white&labelColor=1a1a2e)
 
-[![CI](https://github.com/MAOFILHO/Portfolio-Projects/actions/workflows/azure-microsoftfoundry-agentic-finetuning-platform-ci.yml/badge.svg)](https://github.com/MAOFILHO/Portfolio-Projects/actions/workflows/azure-microsoftfoundry-agentic-finetuning-platform-ci.yml)
+[![CI](https://github.com/MAOFILHO/Azure-MicrosoftFoundry-Agentic-FineTuning-Platform/actions/workflows/ci.yml/badge.svg)](https://github.com/MAOFILHO/Azure-MicrosoftFoundry-Agentic-FineTuning-Platform/actions/workflows/ci.yml)
 
 **Live deployment:** currently offline — verified working end to end (real Microsoft sign-in, real 401 on an unauthenticated request), then torn down to stay at $0 between demos. See [Live deployment](#live-deployment) for the evidence and how to redeploy it.
 
@@ -534,8 +534,9 @@ Three GitHub Actions workflows in `.github/workflows/`:
   every push/PR. **Never provisions anything.**
 - **`deploy.yml`** — manual (`workflow_dispatch`, requires typed
   confirmation) — provisions Azure, runs live, tears nothing down.
-- **`teardown.yml`** — manual + nightly cron safety-net sweep, catching any
-  resource orphaned by the auto-increment naming scheme (see below).
+- **`teardown.yml`** — manual only; sweeps any resource orphaned by the
+  auto-increment naming scheme (see below). The monorepo's nightly cron
+  was not carried over.
 
 ## A deliberate risk, and how it's mitigated
 
@@ -599,26 +600,21 @@ the full breakdown and the decisions behind it (Docker Hub over ACR to
 avoid the one non-$0 line item, `min_replicas = 0` cold-start trade-off,
 etc.).
 
-**CI/CD:** this project lives in a monorepo
-([`Portfolio-Projects`](https://github.com/MAOFILHO/Portfolio-Projects)) and
-its GitHub Actions setup follows that monorepo's conventions — see
-[GitHub Actions CI/CD](#github-actions-cicd) below for how it actually works.
+**CI/CD:** see [GitHub Actions CI/CD](#github-actions-cicd) below for how it works.
 
 ## GitHub Actions CI/CD
 
-This project's workflows live at the **monorepo root**
-`.github/workflows/`, not inside this project's own folder — GitHub Actions
-only discovers workflows at the repo root, and every sibling project in
-`Portfolio-Projects` follows the same
-`<project-slug>-<purpose>.yml` naming so one repo can host many independent
-projects' pipelines without collisions.
+Workflows live in `.github/workflows/`. This project was extracted from the
+`Portfolio-Projects` monorepo, where they were path-scoped and named
+`<project-slug>-<purpose>.yml`; here they are plain `ci.yml`, `deploy.yml`,
+`hosting-deploy.yml` and `teardown.yml`.
 
 | Workflow | Trigger | Needs Azure creds? | What it does |
 |---|---|---|---|
-| `…-ci.yml` | push/PR to `main`, **path-scoped** to this folder only | No | Lint, unit tests, mock end-to-end run, `tsc` type-check, frontend build, `terraform validate` — all $0, no cloud calls |
-| `…-deploy.yml` | `workflow_dispatch` only, requires typing `confirm: provision` | Yes (OIDC) | Provisions the AI infra (Foundry account, base model deployments) and runs a real live-mode pass |
-| `…-hosting-deploy.yml` | `workflow_dispatch` only | Yes (OIDC) | Builds + pushes the backend image to Docker Hub, rolls the Container App to it, builds + deploys the frontend to the Static Web App |
-| `…-teardown.yml` | `workflow_dispatch`, **and** a nightly cron safety-net sweep | Yes (OIDC) | `terraform destroy` + a tag-based orphan sweep + a release-blocking smoke test that fails loudly if anything survives |
+| `ci.yml` | push/PR to `main` | No | Lint, unit tests, mock end-to-end run, `tsc` type-check, frontend build, `terraform validate` — all $0, no cloud calls |
+| `deploy.yml` | `workflow_dispatch` only, requires typing `confirm: provision` | Yes (OIDC) | Provisions the AI infra (Foundry account, base model deployments) and runs a real live-mode pass |
+| `hosting-deploy.yml` | `workflow_dispatch` only | Yes (OIDC) | Builds + pushes the backend image to Docker Hub, rolls the Container App to it, builds + deploys the frontend to the Static Web App |
+| `teardown.yml` | `workflow_dispatch` only (the monorepo's nightly cron was not carried over; see the header comment in the workflow) | Yes (OIDC) | `terraform destroy` + a tag-based orphan sweep + a release-blocking smoke test that fails loudly if anything survives |
 
 <img width="100%" alt="Docker Desktop's Images tab, showing the backend image pushed to Docker Hub alongside the locally-built frontend/backend images" src="docs/file14.png" />
 <p><em>What <code>hosting-deploy.yml</code>'s image build step produces —
@@ -671,7 +667,7 @@ exchanges a short-lived GitHub-issued token for an Azure one via a
 federated identity credential
 (`azuread_application_federated_identity_credential` in
 `infra/terraform-identity/`), scoped to
-`repo:MAOFILHO/Portfolio-Projects:ref:refs/heads/main`. Nothing long-lived
+`repo:MAOFILHO/Azure-MicrosoftFoundry-Agentic-FineTuning-Platform:ref:refs/heads/main`. Nothing long-lived
 to leak, rotate, or accidentally commit.
 
 **The OIDC identity is a separate Terraform root from everything else it
@@ -899,8 +895,7 @@ Azure-MicrosoftFoundry-Agentic-FineTuning-Platform/
     ├── LESSONS_LEARNED.md             # Generalizable takeaways from each one
     └── file1.png … file15.png         # Web app, CI/CD, provisioning, and Docker screenshots
 
-(GitHub Actions workflows live at the monorepo root .github/workflows/,
- prefixed azure-microsoftfoundry-agentic-finetuning-platform-* — see GitHub Actions CI/CD)
+(GitHub Actions workflows live in .github/workflows/ — see GitHub Actions CI/CD)
 ```
 
 ---

@@ -13,7 +13,7 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   built-in Easy Auth, which has a confirmed platform bug blocking CORS
   preflight for this SPA + separate-origin-API shape. See
   [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) #12–15.
-- **GitHub Actions CI/CD**: four workflows at the monorepo root
+- **GitHub Actions CI/CD**: four workflows in `.github/workflows/`
   (`ci`, `deploy`, `hosting-deploy`, `teardown`), OIDC auth (no stored Azure
   secret), a least-privilege custom role scoped to just this project's
   resources (`infra/foundry-deployer-role.json`).
